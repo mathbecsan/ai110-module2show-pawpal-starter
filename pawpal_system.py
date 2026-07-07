@@ -154,14 +154,15 @@ class Scheduler:
         return filtered
 
     def detect_conflicts(self, tasks: List[Task]) -> List[str]:
-        """Return a warning for each fixed time slot shared by more than one task.
+        """Return a warning for each fixed time slot shared by more than one pending task.
 
         This only catches exact same-time matches, not overlapping durations
         (see reflection.md, section 2b for why that tradeoff is acceptable here).
+        Completed tasks are ignored since they no longer occupy a time slot.
         """
         by_time: Dict[str, List[Task]] = {}
         for task in tasks:
-            if task.time is not None:
+            if task.time is not None and not task.completed:
                 by_time.setdefault(task.time, []).append(task)
 
         warnings: List[str] = []

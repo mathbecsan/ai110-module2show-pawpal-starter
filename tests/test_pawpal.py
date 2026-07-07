@@ -134,6 +134,16 @@ def test_detect_conflicts_no_warning_for_different_times():
     assert scheduler.detect_conflicts(tasks) == []
 
 
+def test_detect_conflicts_ignores_completed_tasks():
+    scheduler = Scheduler(available_minutes=60)
+    tasks = [
+        Task(id="1", title="Walk", duration_minutes=30, priority="high", time="08:00", completed=True),
+        Task(id="2", title="Feeding", duration_minutes=10, priority="high", time="08:00"),
+    ]
+
+    assert scheduler.detect_conflicts(tasks) == []
+
+
 def test_filter_tasks_by_pet_name_and_completion():
     scheduler = Scheduler(available_minutes=60)
     walk = Task(id="1", title="Walk", duration_minutes=30, priority="high", pet_name="Biscuit", completed=True)

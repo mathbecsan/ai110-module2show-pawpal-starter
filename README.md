@@ -22,6 +22,16 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
+## ✨ Features
+
+- **Owner & pet profiles** — enter an owner name and a pet's name/species; the app builds an `Owner`/`Pet` pair behind the scenes (`app.py`, `pawpal_system.py`).
+- **Task management** — add care tasks with a title, duration, priority, an optional fixed time, and a repeat frequency (`Pet.add_task()`).
+- **Sorting by time** — `Scheduler.sort_by_time()` orders tasks chronologically by their fixed `"HH:MM"` slot, pushing flexible (untimed) tasks to the end.
+- **Filtering** — `Scheduler.filter_tasks()` narrows the task list by pet name and/or completion status; the UI exposes this as "Sort by time" / "Show completed tasks" toggles.
+- **Conflict warnings** — `Scheduler.detect_conflicts()` flags pending tasks that share the same fixed time slot, surfaced in the UI via `st.warning` so an owner immediately sees which tasks clash and can move one.
+- **Daily/weekly recurrence** — `Task.next_occurrence()` + `Pet.complete_task()` automatically create the next instance of a `"daily"`/`"weekly"` task (due date advanced with `timedelta`) the moment it's marked complete.
+- **Priority-based daily schedule** — `Scheduler.build_schedule()` fits as many tasks as possible into the day's available minutes, ordered high → medium → low priority, and `Scheduler.explain_plan()` explains the result in plain English.
+
 ## Getting started
 
 ### Setup
@@ -106,7 +116,7 @@ The suite in `tests/test_pawpal.py` covers:
 - **Sorting**: `Scheduler.sort_by_time()` returns tasks in chronological order and pushes untimed tasks to the end.
 - **Scheduling**: `Scheduler.build_schedule()` orders tasks by priority (high → medium → low) and skips a task that doesn't fit in the remaining time budget.
 - **Recurring tasks**: completing a `"daily"` task creates a next occurrence due the following day, a `"weekly"` task advances by 7 days, and a one-time (`"once"`) task produces no next occurrence.
-- **Conflict detection**: `Scheduler.detect_conflicts()` flags two tasks sharing the same fixed time slot and stays silent when times differ.
+- **Conflict detection**: `Scheduler.detect_conflicts()` flags two pending tasks sharing the same fixed time slot, stays silent when times differ, and ignores completed tasks (a finished task no longer occupies its slot).
 - **Filtering**: `Scheduler.filter_tasks()` filters correctly by pet name and by completion status.
 
 Sample test output:
@@ -116,14 +126,14 @@ Sample test output:
 platform darwin -- Python 3.12.0, pytest-9.1.1, pluggy-1.6.0
 rootdir: /Users/mathiasbecerrasanchez/Downloads/ai110-module2show-pawpal-starter-main
 plugins: anyio-4.14.1
-collected 13 items
+collected 14 items
 
-tests/test_pawpal.py .............                                       [100%]
+tests/test_pawpal.py ..............                                      [100%]
 
-============================== 13 passed in 0.01s ==============================
+============================== 14 passed in 0.01s ==============================
 ```
 
-**Confidence Level**: ⭐⭐⭐⭐☆ (4/5) — all core class behavior, sorting, priority scheduling, recurrence, conflict detection, and filtering are covered and passing. The main gap (see reflection.md 2b) is that conflict detection only checks exact time matches, not overlapping durations, so that edge case isn't verified here.
+**Confidence Level**: ⭐⭐⭐⭐☆ (4/5) — all core class behavior, sorting, priority scheduling, recurrence, conflict detection, and filtering are covered and passing, and the full add → sort/filter → conflict → complete → recur → schedule flow has been verified end-to-end through both the CLI (`main.py`) and the Streamlit UI. The main known gap (see reflection.md 2b) is that conflict detection only checks exact time matches, not overlapping durations, so that edge case isn't verified here.
 
 ## 📐 Smarter Scheduling
 
@@ -136,12 +146,67 @@ tests/test_pawpal.py .............                                       [100%]
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+**UI features and actions available:**
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+- Set the owner's name and the pet's name/species under "Owner & Pet."
+- Set the day's start time and how many minutes are available under "Today's Constraints."
+- Add a task under "Add a Task" with a title, duration, priority, an optional fixed time (checkbox + time picker), and a repeat frequency (once/daily/weekly).
+- Under "Tasks," toggle "Sort by time" and "Show completed tasks" to see filtering/sorting live, mark any pending task complete from the dropdown, and read conflict warnings for any tasks sharing a fixed time slot.
+- Click "Generate schedule" to build and view today's priority-ordered plan, with an expandable "Why this plan?" explanation.
 
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+**Example workflow:**
+
+1. Owner "Jordan" adds pet "Mochi" (dog).
+2. Add "Litter box cleaning" (15 min, medium priority, no fixed time).
+3. Add "Feeding" (10 min, high priority, fixed time 08:00, repeats daily).
+4. Add "Morning walk" (30 min, high priority, fixed time 08:00, once) — since it shares 08:00 with "Feeding," a conflict warning appears immediately: *"Conflict at 08:00: Feeding (Mochi), Morning walk (Mochi)."*
+5. Mark "Feeding" complete — a success message confirms its next occurrence was auto-scheduled for tomorrow, and the conflict warning updates (a completed task no longer counts as occupying its slot).
+6. Click "Generate schedule" — the app fits "Morning walk" and "Litter box cleaning" into the available minutes, ordered by priority, with an explanation of why each task was included.
+
+**Key Scheduler behaviors shown:** chronological sorting (`sort_by_time`), pet/completion filtering (`filter_tasks`), same-time conflict warnings that ignore completed tasks (`detect_conflicts`), daily/weekly recurrence on completion (`next_occurrence`/`complete_task`), and priority-based schedule building with reasoning (`build_schedule`/`explain_plan`).
+
+**Sample CLI output** (from `python main.py`, which exercises the same backend as the UI):
+
+```
+========================================
+Today's Schedule
+========================================
+08:00-08:30  Morning walk (Biscuit) [high]
+08:30-08:40  Feeding (Biscuit) [high]
+08:40-08:55  Litter box cleaning (Mochi) [medium]
+
+3 task(s) scheduled, ordered by priority (high, then medium, then low).
+- Morning walk for Biscuit: high priority, 30 min, scheduled 08:00-08:30
+- Feeding for Biscuit: high priority, 10 min, scheduled 08:30-08:40
+- Litter box cleaning for Mochi: medium priority, 15 min, scheduled 08:40-08:55
+
+========================================
+Sorted by time
+========================================
+07:30  Litter box cleaning (Mochi)
+08:00  Morning walk (Biscuit)
+08:00  Feeding (Biscuit)
+(flexible)  Playtime (Mochi)
+
+========================================
+Filtered: Biscuit's tasks
+========================================
+- Morning walk
+- Feeding
+
+========================================
+Conflict check
+========================================
+WARNING: Conflict at 08:00: Morning walk (Biscuit), Feeding (Biscuit)
+
+========================================
+Recurring task demo
+========================================
+Completing Biscuit's daily 'Feeding' task...
+Next occurrence auto-created: due 2026-07-08 (id=2-2026-07-08)
+
+========================================
+Filtered: Biscuit's completed tasks
+========================================
+- Feeding (completed)
+```

@@ -31,8 +31,9 @@ Yes — I asked my AI assistant to review the skeleton in `pawpal_system.py` and
 
 **a. Constraints and priorities**
 
-- What constraints does your scheduler consider (for example: time, priority, preferences)?
-- How did you decide which constraints mattered most?
+The scheduler considers: the owner's available minutes and day start time, each task's `duration_minutes` and `priority` (high/medium/low), an optional fixed `time` slot used only for conflict warnings, and `frequency` (once/daily/weekly) for recurrence.
+
+Time and priority mattered most because they're what actually decide whether a task makes it into today's plan (`build_schedule` sorts by priority, then greedily fits tasks into the remaining minutes). Fixed time and frequency are secondary — they don't change what gets scheduled today, they just add a warning layer (conflicts) and automation layer (recurrence) on top of the core priority/time-budget decision.
 
 **b. Tradeoffs**
 
@@ -46,13 +47,15 @@ This is reasonable for PawPal+ because most owners think in terms of "I want to 
 
 **a. How you used AI**
 
-- How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
-- What kinds of prompts or questions were most helpful?
+I used AI across the full arc: brainstorming the class list and UML from the scenario, scaffolding `pawpal_system.py` and `main.py`, writing the pytest suite, and — in this final phase — wiring `app.py` to the Scheduler and driving the running app (CLI, a headless browser, and Streamlit's `AppTest` harness) to actually verify it worked rather than just reading the code. The most effective single feature was multi-file agent editing: being able to change `pawpal_system.py`, `main.py`, and `tests/test_pawpal.py` together in one pass kept the backend, the demo, and the tests from drifting out of sync with each other.
+
+I also kept each phase in its own focused context — design (Phases 1–3), algorithms (Phase 4), testing (Phase 5), UI/polish (Phase 6) — rather than one long running chat. The most useful prompts were narrow and file-scoped ("based on my skeleton, how should X talk to Y") rather than open-ended ("make this better"), because they got answers I could immediately check against the actual classes instead of generic advice.
 
 **b. Judgment and verification**
 
-- Describe one moment where you did not accept an AI suggestion as-is.
-- How did you evaluate or verify what the AI suggested?
+The clearest moment was in this phase: after wiring the "Mark complete" button in `app.py`, I didn't just trust that the code looked right — I actually launched the Streamlit app and drove it end-to-end with a browser automation script. The success message ("Next occurrence auto-scheduled...") never appeared on screen, even though the underlying `Pet.complete_task()` logic was already unit-tested and correct. The cause was a line I'd written myself: `st.rerun()` called immediately after `st.success(...)`, which restarts the script before the message can render. It read as perfectly reasonable code — Streamlit apps call `st.rerun()` all the time — and would have passed a code review by inspection alone. Only running the app and watching the actual page state caught it. I removed the redundant `st.rerun()` (button clicks already trigger a rerun) and re-verified with both a browser script and Streamlit's `AppTest` harness before trusting it.
+
+That same testing pass also surfaced a real design gap, not just a bug: `Scheduler.detect_conflicts()` was flagging a *completed* task as still conflicting with a pending one at the same time slot. I decided that was wrong — a finished task no longer occupies its slot — and fixed `detect_conflicts` to ignore completed tasks, adding a test (`test_detect_conflicts_ignores_completed_tasks`) to lock in that decision.
 
 ---
 
@@ -60,13 +63,15 @@ This is reasonable for PawPal+ because most owners think in terms of "I want to 
 
 **a. What you tested**
 
-- What behaviors did you test?
-- Why were these tests important?
+Fourteen automated tests cover: core class behavior (mark complete, add task, empty-pet edge case, cross-pet task aggregation), sorting by time (including untimed tasks), priority-based schedule building (including a task that doesn't fit the time budget), recurring tasks (daily advances 1 day, weekly advances 7 days, one-time tasks produce no recurrence), conflict detection (duplicate times flagged, different times silent, completed tasks ignored), and filtering by pet/completion status.
+
+These mattered because they're exactly what a pet owner depends on for correctness in ways that fail silently otherwise: wrong priority ordering means an urgent task quietly gets bumped for a low-priority one; wrong recurrence means an owner stops getting reminded about a daily medication without any error; wrong conflict detection means two tasks silently double-book a time slot.
 
 **b. Confidence**
 
-- How confident are you that your scheduler works correctly?
-- What edge cases would you test next if you had more time?
+4/5. Every unit-level behavior is tested and passing, and in this phase I also verified the full add → sort/filter → conflict → complete → recur → schedule flow end-to-end against the actually-running app (CLI and Streamlit UI), which is what caught the `st.rerun()` bug and the completed-task conflict gap described above — issues unit tests alone wouldn't have caught since they don't touch `app.py`.
+
+What I'd test next: overlapping-duration conflicts (two tasks at different start times whose durations overlap — currently undetected, see 2b), a multi-pet flow driven through the actual UI (the backend already supports multiple pets via `Owner.get_all_tasks()`, but `app.py` only manages one pet at a time), and date/time edge cases like a recurring task completed right at a day boundary.
 
 ---
 
@@ -74,12 +79,12 @@ This is reasonable for PawPal+ because most owners think in terms of "I want to 
 
 **a. What went well**
 
-- What part of this project are you most satisfied with?
+The recurring-task and conflict-detection interaction: completing a `"daily"` task correctly spawns its next occurrence *and* correctly stops counting the just-completed task as a live conflict, while still catching a genuine clash with the newly-created next occurrence if one exists. Getting that interaction right took an actual bug fix (see 3b), so I'm most satisfied that the final behavior is verified correct rather than just plausible-looking.
 
 **b. What you would improve**
 
-- If you had another iteration, what would you improve or redesign?
+Two things: extend `app.py` to manage multiple pets in the UI (the backend already supports it via `Owner`/`Owner.get_all_tasks()`, but the current UI only wires up one `Pet`), and upgrade `detect_conflicts()` from exact-time matching to real interval-overlap detection so a 08:00–08:30 task and an 08:15 task would also get flagged.
 
 **c. Key takeaway**
 
-- What is one important thing you learned about designing systems or working with AI on this project?
+AI can generate a lot of plausible-looking code very quickly — including code that's subtly wrong in ways that survive a casual read. The `st.rerun()` bug in this phase is the clearest example: it looked like normal, idiomatic Streamlit code, and only actually running the app (not reading it) revealed that it silently discarded user feedback. Being the "lead architect" here meant not treating "the code compiles and looks reasonable" as good enough — it meant insisting on driving the real app end-to-end, and owning the judgment calls (exact-time vs. overlap conflicts, where to draw the Scheduler/Owner/Pet boundary) that AI can propose but shouldn't be trusted to settle alone.
