@@ -2,15 +2,28 @@
 
 ## 1. System Design
 
+**Core user actions**
+
+A pet owner using PawPal+ should be able to:
+
+1. **Add a pet (and their own owner info)** — enter their name and basic preferences (e.g. earliest start time, how many minutes a day they can realistically spend on care), then add one or more pets with a name and species.
+2. **Add/edit care tasks for a pet** — record what needs to happen (walk, feeding, meds, enrichment, grooming), how long it takes, and how important it is (priority), and be able to update or remove a task later.
+3. **Generate and view today's plan** — press a button to have the app pick and order the day's tasks based on the owner's available time and each task's priority, and see a short explanation of why the plan looks the way it does.
+
 **a. Initial design**
 
-- Briefly describe your initial UML design.
-- What classes did you include, and what responsibilities did you assign to each?
+My initial UML has four classes:
+
+- **Owner** — holds the owner's `name`, a `preferences` dict (e.g. start time, daily time budget), and the list of `Pet`s they own. Responsible for managing that list (`add_pet`, `get_pets`).
+- **Pet** — holds `name`, `species`, and the list of `Task`s that belong to that pet. Responsible for managing its own tasks (`add_task`, `remove_task`, `get_tasks`).
+- **Task** — a plain data holder for one care item: `title`, `duration_minutes`, `priority`, `category`, `is_recurring`, `completed`, plus (after refinement, see below) `pet_name`. Responsible for its own completion state (`mark_complete`).
+- **Scheduler** — takes a flat list of `Task`s plus an `available_minutes` budget and `start_time`, and is responsible for producing an ordered, time-stamped schedule (`build_schedule`) and a human-readable explanation of the choices (`explain_plan`).
+
+The relationships are: `Owner` owns many `Pet`s, `Pet` has many `Task`s, and `Scheduler` depends on `Task` (it does not depend on `Owner`/`Pet` directly — see below).
 
 **b. Design changes**
 
-- Did your design change during implementation?
-- If yes, describe at least one change and why you made it.
+Yes — I asked my AI assistant to review the skeleton in `pawpal_system.py` and it flagged that `Scheduler.build_schedule` takes a flat `List[Task]` with no way to tell which pet each task came from once tasks from multiple pets are merged together, which would break the "explain the plan" requirement for an owner with more than one pet. Rather than giving `Scheduler` a hard dependency on `Pet`/`Owner` (which would couple scheduling logic to the ownership hierarchy), I added an optional `pet_name` field directly on `Task`. This keeps `Scheduler` simple and pet-agnostic while still letting `build_schedule`/`explain_plan` reference which pet a task belongs to in the output.
 
 ---
 
