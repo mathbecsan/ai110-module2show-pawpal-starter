@@ -44,6 +44,7 @@ classDiagram
         +sort_by_time(tasks: List~Task~) List~Task~
         +filter_tasks(tasks: List~Task~) List~Task~
         +detect_conflicts(tasks: List~Task~) List~str~
+        +find_next_available_slot(tasks: List~Task~, duration_minutes: int) str
     }
 
     Owner "1" --> "many" Pet : owns

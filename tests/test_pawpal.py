@@ -144,6 +144,48 @@ def test_detect_conflicts_ignores_completed_tasks():
     assert scheduler.detect_conflicts(tasks) == []
 
 
+def test_find_next_available_slot_returns_start_when_free():
+    scheduler = Scheduler(available_minutes=120, start_time="08:00")
+
+    assert scheduler.find_next_available_slot([], duration_minutes=20) == "08:00"
+
+
+def test_find_next_available_slot_after_busy_task():
+    scheduler = Scheduler(available_minutes=120, start_time="08:00")
+    tasks = [Task(id="1", title="Walk", duration_minutes=30, priority="high", time="08:00")]
+
+    assert scheduler.find_next_available_slot(tasks, duration_minutes=20) == "08:30"
+
+
+def test_find_next_available_slot_fills_gap_between_busy_tasks():
+    scheduler = Scheduler(available_minutes=120, start_time="08:00")
+    tasks = [
+        Task(id="1", title="Walk", duration_minutes=30, priority="high", time="08:00"),
+        Task(id="2", title="Training", duration_minutes=30, priority="medium", time="09:30"),
+    ]
+
+    assert scheduler.find_next_available_slot(tasks, duration_minutes=20) == "08:30"
+
+
+def test_find_next_available_slot_accounts_for_overlapping_busy_tasks():
+    scheduler = Scheduler(available_minutes=90, start_time="08:00")
+    tasks = [
+        Task(id="1", title="Walk", duration_minutes=40, priority="high", time="08:00"),
+        Task(id="2", title="Training", duration_minutes=30, priority="medium", time="08:20"),
+    ]
+
+    # The two tasks overlap (08:00-08:40 and 08:20-08:50), so the day is busy
+    # until 08:50, not just until the first task's 08:40 end.
+    assert scheduler.find_next_available_slot(tasks, duration_minutes=10) == "08:50"
+
+
+def test_find_next_available_slot_returns_none_when_day_full():
+    scheduler = Scheduler(available_minutes=60, start_time="08:00")
+    tasks = [Task(id="1", title="Long walk", duration_minutes=60, priority="high", time="08:00")]
+
+    assert scheduler.find_next_available_slot(tasks, duration_minutes=15) is None
+
+
 def test_filter_tasks_by_pet_name_and_completion():
     scheduler = Scheduler(available_minutes=60)
     walk = Task(id="1", title="Walk", duration_minutes=30, priority="high", pet_name="Biscuit", completed=True)

@@ -31,6 +31,7 @@ Your final app should:
 - **Conflict warnings** — `Scheduler.detect_conflicts()` flags pending tasks that share the same fixed time slot, surfaced in the UI via `st.warning` so an owner immediately sees which tasks clash and can move one.
 - **Daily/weekly recurrence** — `Task.next_occurrence()` + `Pet.complete_task()` automatically create the next instance of a `"daily"`/`"weekly"` task (due date advanced with `timedelta`) the moment it's marked complete.
 - **Priority-based daily schedule** — `Scheduler.build_schedule()` fits as many tasks as possible into the day's available minutes, ordered high → medium → low priority, and `Scheduler.explain_plan()` explains the result in plain English.
+- **Next available slot finder** — `Scheduler.find_next_available_slot()` finds the earliest open time slot (of a given duration) that doesn't overlap any pending fixed-time task, using real `[start, start+duration]` interval math rather than exact-time matching.
 
 ## Getting started
 
@@ -98,6 +99,11 @@ Next occurrence auto-created: due 2026-07-08 (id=2-2026-07-08)
 Filtered: Biscuit's completed tasks
 ========================================
 - Feeding (completed)
+
+========================================
+Next available slot
+========================================
+A 15-minute task could start at 08:30 without any overlap.
 ```
 
 ## 🧪 Testing PawPal+
@@ -126,14 +132,14 @@ Sample test output:
 platform darwin -- Python 3.12.0, pytest-9.1.1, pluggy-1.6.0
 rootdir: /Users/mathiasbecerrasanchez/Downloads/ai110-module2show-pawpal-starter-main
 plugins: anyio-4.14.1
-collected 14 items
+collected 19 items
 
-tests/test_pawpal.py ..............                                      [100%]
+tests/test_pawpal.py ...................                                 [100%]
 
-============================== 14 passed in 0.01s ==============================
+============================== 19 passed in 0.01s ==============================
 ```
 
-**Confidence Level**: ⭐⭐⭐⭐☆ (4/5) — all core class behavior, sorting, priority scheduling, recurrence, conflict detection, and filtering are covered and passing, and the full add → sort/filter → conflict → complete → recur → schedule flow has been verified end-to-end through both the CLI (`main.py`) and the Streamlit UI. The main known gap (see reflection.md 2b) is that conflict detection only checks exact time matches, not overlapping durations, so that edge case isn't verified here.
+**Confidence Level**: ⭐⭐⭐⭐☆ (4/5) — all core class behavior, sorting, priority scheduling, recurrence, conflict detection, filtering, and next-available-slot finding are covered and passing, and the full add → sort/filter → conflict → complete → recur → schedule flow has been verified end-to-end through both the CLI (`main.py`) and the Streamlit UI. The main known gap (see reflection.md 2b) is that `detect_conflicts()` only checks exact time matches, not overlapping durations — though `find_next_available_slot()` does do real interval-overlap math, so that gap is now narrower than it was.
 
 ## 📐 Smarter Scheduling
 
@@ -143,6 +149,7 @@ tests/test_pawpal.py ..............                                      [100%]
 | Filtering | `Scheduler.filter_tasks()` | Filters a task list by `pet_name` and/or `completed` status |
 | Conflict handling | `Scheduler.detect_conflicts()` | Warns when two or more tasks share the exact same fixed time slot (see reflection.md 2b for why exact-match, not overlap, was chosen) |
 | Recurring tasks | `Task.next_occurrence()`, `Pet.complete_task()` | Completing a `"daily"`/`"weekly"` task via `Pet.complete_task()` auto-creates the next occurrence with `due_date` advanced by a `timedelta` |
+| Next available slot | `Scheduler.find_next_available_slot()` | Finds the earliest open `"HH:MM"` slot of a given duration by merging real `[start, start+duration]` intervals from pending fixed-time tasks — catches overlaps that `detect_conflicts()`'s exact-match check would miss |
 
 ## 📸 Demo Walkthrough
 
@@ -163,7 +170,7 @@ tests/test_pawpal.py ..............                                      [100%]
 5. Mark "Feeding" complete — a success message confirms its next occurrence was auto-scheduled for tomorrow, and the conflict warning updates (a completed task no longer counts as occupying its slot).
 6. Click "Generate schedule" — the app fits "Morning walk" and "Litter box cleaning" into the available minutes, ordered by priority, with an explanation of why each task was included.
 
-**Key Scheduler behaviors shown:** chronological sorting (`sort_by_time`), pet/completion filtering (`filter_tasks`), same-time conflict warnings that ignore completed tasks (`detect_conflicts`), daily/weekly recurrence on completion (`next_occurrence`/`complete_task`), and priority-based schedule building with reasoning (`build_schedule`/`explain_plan`).
+**Key Scheduler behaviors shown:** chronological sorting (`sort_by_time`), pet/completion filtering (`filter_tasks`), same-time conflict warnings that ignore completed tasks (`detect_conflicts`), daily/weekly recurrence on completion (`next_occurrence`/`complete_task`), priority-based schedule building with reasoning (`build_schedule`/`explain_plan`), and finding the next open interval-aware time slot for a new task (`find_next_available_slot`).
 
 **Sample CLI output** (from `python main.py`, which exercises the same backend as the UI):
 
@@ -209,4 +216,9 @@ Next occurrence auto-created: due 2026-07-08 (id=2-2026-07-08)
 Filtered: Biscuit's completed tasks
 ========================================
 - Feeding (completed)
+
+========================================
+Next available slot
+========================================
+A 15-minute task could start at 08:30 without any overlap.
 ```

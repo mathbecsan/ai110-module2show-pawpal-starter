@@ -172,6 +172,33 @@ class Scheduler:
                 warnings.append(f"Conflict at {time_slot}: {names}")
         return warnings
 
+    def find_next_available_slot(self, tasks: List[Task], duration_minutes: int) -> Optional[str]:
+        """Find the earliest "HH:MM" slot, within today's time budget, long enough to fit
+        a task of the given duration without overlapping any pending fixed-time task.
+
+        Unlike detect_conflicts() (which only flags identical time strings), this compares
+        actual [start, start+duration] intervals, so overlapping (not just identical) fixed
+        times correctly block out the day. Returns None if no slot fits before the day ends.
+        """
+        day_start = _time_to_minutes(self.start_time)
+        day_end = day_start + self.available_minutes
+
+        busy_intervals = sorted(
+            (_time_to_minutes(task.time), _time_to_minutes(task.time) + task.duration_minutes)
+            for task in tasks
+            if task.time is not None and not task.completed
+        )
+
+        candidate = day_start
+        for busy_start, busy_end in busy_intervals:
+            if candidate + duration_minutes <= busy_start:
+                return _minutes_to_time(candidate)
+            candidate = max(candidate, busy_end)
+
+        if candidate + duration_minutes <= day_end:
+            return _minutes_to_time(candidate)
+        return None
+
     def explain_plan(self, schedule: List[Task]) -> str:
         """Return a human-readable explanation of why the schedule looks the way it does."""
         if not schedule:

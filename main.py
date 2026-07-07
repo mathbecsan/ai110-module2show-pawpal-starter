@@ -69,3 +69,14 @@ print("Filtered: Biscuit's completed tasks")
 print("=" * 40)
 for task in scheduler.filter_tasks(biscuit.get_tasks(), completed=True):
     print(f"- {task.title} (completed)")
+
+print()
+print("=" * 40)
+print("Next available slot")
+print("=" * 40)
+new_task_minutes = 15
+slot = scheduler.find_next_available_slot(owner.get_all_tasks(), duration_minutes=new_task_minutes)
+if slot:
+    print(f"A {new_task_minutes}-minute task could start at {slot} without any overlap.")
+else:
+    print(f"No {new_task_minutes}-minute slot is free today.")
