@@ -36,8 +36,9 @@ Yes — I asked my AI assistant to review the skeleton in `pawpal_system.py` and
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+`Scheduler.detect_conflicts()` only flags tasks that share the *exact same* `time` string (e.g. two tasks both set to "08:00"). It does not check whether task durations actually overlap — a task at 08:00 for 30 minutes and another at 08:15 would not be flagged, even though they overlap in practice.
+
+This is reasonable for PawPal+ because most owners think in terms of "I want to do the walk around 8am" rather than precise start/end windows, so exact-match slots already catch the realistic case (accidentally double-booking a time) with a simple, easy-to-read `dict`-based grouping. Real interval-overlap detection (comparing `[start, start+duration]` ranges pairwise) would be more correct but adds real complexity for a feature that's meant to be a lightweight warning, not a hard scheduling constraint — the actual time slots owners get are still computed separately by `build_schedule()`, which never double-books tasks in the first place.
 
 ---
 

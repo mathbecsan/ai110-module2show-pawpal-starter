@@ -58,6 +58,36 @@ Today's Schedule
 - Morning walk for Biscuit: high priority, 30 min, scheduled 08:00-08:30
 - Feeding for Biscuit: high priority, 10 min, scheduled 08:30-08:40
 - Litter box cleaning for Mochi: medium priority, 15 min, scheduled 08:40-08:55
+
+========================================
+Sorted by time
+========================================
+07:30  Litter box cleaning (Mochi)
+08:00  Morning walk (Biscuit)
+08:00  Feeding (Biscuit)
+(flexible)  Playtime (Mochi)
+
+========================================
+Filtered: Biscuit's tasks
+========================================
+- Morning walk
+- Feeding
+
+========================================
+Conflict check
+========================================
+WARNING: Conflict at 08:00: Morning walk (Biscuit), Feeding (Biscuit)
+
+========================================
+Recurring task demo
+========================================
+Completing Biscuit's daily 'Feeding' task...
+Next occurrence auto-created: due 2026-07-08 (id=2-2026-07-08)
+
+========================================
+Filtered: Biscuit's completed tasks
+========================================
+- Feeding (completed)
 ```
 
 ## 🧪 Testing PawPal+
@@ -78,14 +108,12 @@ Sample test output:
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
-
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | `Scheduler.sort_by_time()` | Sorts tasks by their fixed `"HH:MM"` time slot; tasks with no fixed time are pushed to the end |
+| Filtering | `Scheduler.filter_tasks()` | Filters a task list by `pet_name` and/or `completed` status |
+| Conflict handling | `Scheduler.detect_conflicts()` | Warns when two or more tasks share the exact same fixed time slot (see reflection.md 2b for why exact-match, not overlap, was chosen) |
+| Recurring tasks | `Task.next_occurrence()`, `Pet.complete_task()` | Completing a `"daily"`/`"weekly"` task via `Pet.complete_task()` auto-creates the next occurrence with `due_date` advanced by a `timedelta` |
 
 ## 📸 Demo Walkthrough
 

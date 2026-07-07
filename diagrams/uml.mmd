@@ -5,6 +5,7 @@ classDiagram
         +List~Pet~ pets
         +add_pet(pet: Pet) None
         +get_pets() List~Pet~
+        +get_all_tasks() List~Task~
     }
 
     class Pet {
@@ -14,6 +15,7 @@ classDiagram
         +add_task(task: Task) None
         +remove_task(task_id: str) None
         +get_tasks() List~Task~
+        +complete_task(task_id: str) Task
     }
 
     class Task {
@@ -22,19 +24,26 @@ classDiagram
         +int duration_minutes
         +str priority
         +str category
-        +bool is_recurring
+        +str frequency
+        +str time
+        +date due_date
         +bool completed
         +str pet_name
         +str scheduled_start
         +str scheduled_end
         +mark_complete() None
+        +next_occurrence() Task
     }
 
     class Scheduler {
         +int available_minutes
         +str start_time
         +build_schedule(tasks: List~Task~) List~Task~
+        +build_schedule_for_owner(owner: Owner) List~Task~
         +explain_plan(schedule: List~Task~) str
+        +sort_by_time(tasks: List~Task~) List~Task~
+        +filter_tasks(tasks: List~Task~) List~Task~
+        +detect_conflicts(tasks: List~Task~) List~str~
     }
 
     Owner "1" --> "many" Pet : owns
