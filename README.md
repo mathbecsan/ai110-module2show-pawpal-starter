@@ -94,17 +94,36 @@ Filtered: Biscuit's completed tasks
 
 ```bash
 # Run the full test suite:
-pytest
+python -m pytest
 
 # Run with coverage:
 pytest --cov
 ```
 
+The suite in `tests/test_pawpal.py` covers:
+
+- **Core class behavior**: marking a task complete, adding a task to a pet, a pet with no tasks starting empty, and `Owner.get_all_tasks()` aggregating tasks across multiple pets.
+- **Sorting**: `Scheduler.sort_by_time()` returns tasks in chronological order and pushes untimed tasks to the end.
+- **Scheduling**: `Scheduler.build_schedule()` orders tasks by priority (high → medium → low) and skips a task that doesn't fit in the remaining time budget.
+- **Recurring tasks**: completing a `"daily"` task creates a next occurrence due the following day, a `"weekly"` task advances by 7 days, and a one-time (`"once"`) task produces no next occurrence.
+- **Conflict detection**: `Scheduler.detect_conflicts()` flags two tasks sharing the same fixed time slot and stays silent when times differ.
+- **Filtering**: `Scheduler.filter_tasks()` filters correctly by pet name and by completion status.
+
 Sample test output:
 
 ```
-# Paste your pytest output here
+============================= test session starts ==============================
+platform darwin -- Python 3.12.0, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/mathiasbecerrasanchez/Downloads/ai110-module2show-pawpal-starter-main
+plugins: anyio-4.14.1
+collected 13 items
+
+tests/test_pawpal.py .............                                       [100%]
+
+============================== 13 passed in 0.01s ==============================
 ```
+
+**Confidence Level**: ⭐⭐⭐⭐☆ (4/5) — all core class behavior, sorting, priority scheduling, recurrence, conflict detection, and filtering are covered and passing. The main gap (see reflection.md 2b) is that conflict detection only checks exact time matches, not overlapping durations, so that edge case isn't verified here.
 
 ## 📐 Smarter Scheduling
 
